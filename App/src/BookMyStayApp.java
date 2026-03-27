@@ -1,56 +1,78 @@
-public class BookMyStayApp {
-    public static void main(String[] args){
+import java.util.*;
 
-                Long userId = 1L;
-                Long propertyId = 101L;
-                String checkInDate = "2026-04-01";
-                String checkOutDate = "2026-04-05";
+class RoomInventory {
+    private Map<String, Integer> roomAvailability = new HashMap<>();
 
-                // Step 1: Check user
-                if (userId == null) {
-                    System.out.println("User not logged in");
-                    return;
-                }
+    public void addRoomType(String roomType, int count) {
+        roomAvailability.put(roomType, count);
+    }
 
-                // Step 2: Validate dates
-                if (checkInDate.compareTo(checkOutDate) >= 0) {
-                    System.out.println("Invalid dates");
-                    return;
-                }
+    public void incrementRoom(String roomType) {
+        roomAvailability.put(roomType, roomAvailability.getOrDefault(roomType, 0) + 1);
+    }
 
-                // Step 3: Check availability (dummy = always true)
-                boolean isAvailable = true;
+    public int getAvailableRooms(String roomType) {
+        return roomAvailability.getOrDefault(roomType, 0);
+    }
+}
 
-                if (!isAvailable) {
-                    System.out.println("Room not available");
-                    return;
-                }
+class CancellationService {
 
-                // Step 4: Calculate price (dummy logic)
-                double pricePerNight = 2000;
-                int days = 4; // example
-                double totalPrice = pricePerNight * days;
+    private Stack<String> rollbackStack = new Stack<>();
+    private Map<String, String> reservationMap = new HashMap<>();
 
-                // Step 5: Payment (dummy success)
-                boolean paymentSuccess = true;
+    public void registerBooking(String reservationId, String roomType) {
+        reservationMap.put(reservationId, roomType);
+    }
 
-                if (!paymentSuccess) {
-                    System.out.println("Payment failed");
-                    return;
-                }
+    public void cancelBooking(String reservationId, RoomInventory inventory) {
 
-                // Step 6: Booking confirmation
-                String bookingId = "BKG" + System.currentTimeMillis();
-
-                System.out.println("Booking Successful!");
-                System.out.println("Booking ID: " + bookingId);
-                System.out.println("Total Price: " + totalPrice);
-            }
+        if (!reservationMap.containsKey(reservationId)) {
+            System.out.println("Invalid or already cancelled booking.");
+            return;
         }
 
+        String roomType = reservationMap.get(reservationId);
 
+        // LIFO rollback
+        rollbackStack.push(reservationId);
 
+        // Restore inventory
+        inventory.incrementRoom(roomType);
 
+        // Remove booking
+        reservationMap.remove(reservationId);
 
+        System.out.println("Booking cancelled: " + reservationId);
+    }
 
+    public void showRollbackHistory() {
+        System.out.println("\nRollback History (LIFO):");
 
+        if (rollbackStack.isEmpty()) {
+            System.out.println("No cancellations.");
+            return;
+        }
+
+        for (int i = rollbackStack.size() - 1; i >= 0; i--) {
+            System.out.println(rollbackStack.get(i));
+        }
+    }
+}
+
+public class BookMyStayApp {
+    public static void main(String[] args) {
+
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoomType("Single", 5);
+
+        CancellationService service = new CancellationService();
+
+        service.registerBooking("B101", "Single");
+
+        service.cancelBooking("B101", inventory);
+        service.showRollbackHistory();
+
+        System.out.println("Available Rooms: " + inventory.getAvailableRooms("Single"));
+    }
+}
